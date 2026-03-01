@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Hormuz Premium Tracker{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div id="alert-success" class="alert alert-success"></div>
+    <div id="alert-error" class="alert alert-error"></div>
+
+    <!-- Auth -->
+    <div class="card" style="margin-bottom:1.5rem;">
+        <h3>Authentication</h3>
+        <div class="form-group">
+            <label>Admin Password</label>
+            <input type="password" id="admin-password" placeholder="Enter admin password">
+        </div>
+    </div>
+
+    <!-- Add Rate -->
+    <h2>Add Premium Rate Data Point</h2>
+    <div class="card">
+        <form id="rate-form">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="rate-date" required>
+                </div>
+                <div class="form-group">
+                    <label>Premium Rate (%)</label>
+                    <input type="number" id="rate-percent" step="0.001" min="0" max="10" placeholder="e.g. 0.500" required>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div class="form-group">
+                    <label>Vessel Type</label>
+                    <select id="rate-vessel-type">
+                        <option value="standard">Standard</option>
+                        <option value="israel_affiliated">Israel Affiliated</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Source</label>
+                    <input type="text" id="rate-source" placeholder="e.g. Lloyd's List, Marsh">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea id="rate-notes" placeholder="Optional context about this data point"></textarea>
+            </div>
+            <button type="submit" class="btn">Add Rate</button>
+        </form>
+    </div>
+
+    <!-- Add News -->
+    <h2>Add News / Event</h2>
+    <div class="card">
+        <form id="news-form">
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="news-title" placeholder="Headline" required>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div class="form-group">
+                    <label>Source</label>
+                    <input type="text" id="news-source" placeholder="e.g. Reuters, Lloyd's List" required>
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="news-date">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>URL</label>
+                <input type="url" id="news-url" placeholder="https://...">
+            </div>
+            <div class="form-group">
+                <label>Summary</label>
+                <textarea id="news-summary" placeholder="Brief summary of the event and its market impact" required></textarea>
+            </div>
+            <div class="form-group">
+                <label>Impact on Premiums</label>
+                <select id="news-impact">
+                    <option value="negative">Negative (premiums likely to increase)</option>
+                    <option value="neutral">Neutral</option>
+                    <option value="positive">Positive (premiums likely to decrease)</option>
+                </select>
+            </div>
+            <button type="submit" class="btn">Add News</button>
+        </form>
+    </div>
+
+    <!-- Update Risk Level -->
+    <h2>Update Risk Assessment</h2>
+    <div class="card">
+        <form id="risk-form">
+            <div class="form-group">
+                <label>Risk Level</label>
+                <select id="risk-level-select">
+                    <option value="low">Low</option>
+                    <option value="moderate">Moderate</option>
+                    <option value="high" selected>High</option>
+                    <option value="extreme">Extreme</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Risk Factors (one per line)</label>
+                <textarea id="risk-factors-input" placeholder="Active military operations in Persian Gulf&#10;Insurance policy cancellation notices issued&#10;Elevated geopolitical tensions"></textarea>
+            </div>
+            <button type="submit" class="btn">Update Risk Level</button>
+        </form>
+    </div>
+
+    <!-- Scrape trigger -->
+    <h2>News Scraper</h2>
+    <div class="card">
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem;">
+            Trigger a manual scrape of configured news sources. Auto-scrape runs every
+            {{ config.SCRAPE_INTERVAL_HOURS }} hours.
+        </p>
+        <button class="btn btn-green" id="btn-scrape">Run News Scrape Now</button>
+        <div id="scrape-result" style="margin-top:0.75rem;font-size:0.85rem;color:var(--text-secondary);"></div>
+    </div>
+
+    <!-- Existing rates -->
+    <h2>Existing Rate Data</h2>
+    <div class="card">
+        <table class="cost-table" id="existing-rates-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Rate (%)</th>
+                    <th>Type</th>
+                    <th>Source</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="existing-rates-body"></tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function getPassword() {
+    return document.getElementById('admin-password').value;
+}
+
+function showAlert(type, msg) {
+    const el = document.getElementById('alert-' + type);
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+async function adminFetch(url, options = {}) {
+    options.headers = options.headers || {};
+    options.headers['X-Admin-Password'] = getPassword();
+    const resp = await fetch(url, options);
+    if (resp.status === 401) {
+        showAlert('error', 'Invalid admin password');
+        throw new Error('Unauthorized');
+    }
+    return resp;
+}
+
+// Add rate
+document.getElementById('rate-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+        await adminFetch('/api/rates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                date: document.getElementById('rate-date').value,
+                rate_percent: parseFloat(document.getElementById('rate-percent').value),
+                vessel_type: document.getElementById('rate-vessel-type').value,
+                source: document.getElementById('rate-source').value,
+                notes: document.getElementById('rate-notes').value,
+            })
+        });
+        showAlert('success', 'Rate added successfully');
+        document.getElementById('rate-form').reset();
+        loadExistingRates();
+    } catch (e) { /* handled above */ }
+});
+
+// Add news
+document.getElementById('news-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+        await adminFetch('/api/news', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: document.getElementById('news-title').value,
+                source: document.getElementById('news-source').value,
+                date: document.getElementById('news-date').value,
+                url: document.getElementById('news-url').value,
+                summary: document.getElementById('news-summary').value,
+                impact: document.getElementById('news-impact').value,
+            })
+        });
+        showAlert('success', 'News added successfully');
+        document.getElementById('news-form').reset();
+    } catch (e) { /* handled above */ }
+});
+
+// Update risk
+document.getElementById('risk-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+        await adminFetch('/api/risk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                level: document.getElementById('risk-level-select').value,
+                factors: document.getElementById('risk-factors-input').value,
+            })
+        });
+        showAlert('success', 'Risk level updated');
+    } catch (e) { /* handled above */ }
+});
+
+// Scrape
+document.getElementById('btn-scrape').addEventListener('click', async () => {
+    const el = document.getElementById('scrape-result');
+    el.textContent = 'Scraping...';
+    try {
+        const resp = await adminFetch('/api/scrape', { method: 'POST' });
+        const data = await resp.json();
+        el.textContent = `Done. Found ${data.total_found} articles, added ${data.new_added} new.`;
+    } catch (e) {
+        el.textContent = 'Scrape failed.';
+    }
+});
+
+// Load existing rates
+async function loadExistingRates() {
+    try {
+        const resp = await fetch('/api/rates?vessel_type=standard&limit=100');
+        const rates = await resp.json();
+        const tbody = document.getElementById('existing-rates-body');
+        tbody.innerHTML = rates.reverse().map(r => `
+            <tr>
+                <td>${new Date(r.date).toLocaleDateString()}</td>
+                <td>${r.rate_percent.toFixed(3)}%</td>
+                <td>${r.vessel_type}</td>
+                <td>${r.source || '-'}</td>
+                <td><button class="btn btn-danger" style="padding:2px 8px;font-size:0.75rem;" onclick="deleteRate('${r.id}')">Del</button></td>
+            </tr>
+        `).join('');
+    } catch (e) { /* ignore */ }
+}
+
+async function deleteRate(id) {
+    if (!confirm('Delete this rate data point?')) return;
+    try {
+        await adminFetch('/api/rates/' + id, { method: 'DELETE' });
+        showAlert('success', 'Deleted');
+        loadExistingRates();
+    } catch (e) { /* handled */ }
+}
+
+loadExistingRates();
+</script>
+{% endblock %}

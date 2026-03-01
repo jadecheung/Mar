@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Hormuz Premium Tracker{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <div class="top-bar">
+        <div>
+            <h1><span>HORMUZ</span> Premium Tracker</h1>
+            <div class="subtitle">Strait of Hormuz &mdash; War Risk Insurance Monitor</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem;">
+            <span class="live-badge">LIVE</span>
+            <a href="/" class="admin-link">Dashboard</a>
+            <a href="/admin" class="admin-link">Admin</a>
+        </div>
+    </div>
+    {% block content %}{% endblock %}
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<!-- KPI row -->
+<div class="dashboard-grid">
+    <div class="card" id="card-rate">
+        <h3>Current Premium Rate</h3>
+        <div class="big-number rate" id="current-rate">--</div>
+        <div class="change-indicator neutral" id="rate-change">Loading...</div>
+        <div class="source-label" id="rate-source"></div>
+    </div>
+
+    <div class="card" id="card-cost">
+        <h3>Est. VLCC Transit Cost</h3>
+        <div class="big-number cost" id="vlcc-cost">--</div>
+        <div class="source-label">Based on $120M hull value</div>
+    </div>
+
+    <div class="card" id="card-risk">
+        <h3>Geopolitical Risk Level</h3>
+        <div class="big-number" id="risk-level">--</div>
+        <ul class="risk-factors" id="risk-factors"></ul>
+    </div>
+
+    <div class="card" id="card-datapoints">
+        <h3>Data Points Tracked</h3>
+        <div class="big-number" style="color:var(--accent-blue)" id="data-count">--</div>
+        <div class="source-label" id="date-range"></div>
+    </div>
+</div>
+
+<!-- Chart + News row -->
+<div class="dashboard-grid two-col">
+    <div class="card chart-card">
+        <h3>Premium Rate History (% of Hull Value)</h3>
+        <canvas id="rate-chart"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>Latest News &amp; Events</h3>
+        <div class="news-feed" id="news-feed">
+            <div style="color:var(--text-secondary);font-size:0.85rem;">Loading news...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Cost table row -->
+<div class="dashboard-grid two-col">
+    <div class="card">
+        <h3>Estimated Single-Transit Premium by Vessel Type</h3>
+        <table class="cost-table">
+            <thead>
+                <tr>
+                    <th>Vessel Type</th>
+                    <th>Hull Value</th>
+                    <th>Premium Rate</th>
+                    <th>Est. Premium</th>
+                </tr>
+            </thead>
+            <tbody id="cost-table-body">
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3>About This Tracker</h3>
+        <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;">
+            This dashboard monitors war risk insurance premiums for vessels transiting the
+            <strong style="color:var(--text-primary);">Strait of Hormuz</strong>, the world's most
+            important oil chokepoint. Approximately 21 million barrels of oil pass through daily.
+        </p>
+        <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;margin-top:0.75rem;">
+            War risk premiums are additional insurance charges levied on top of standard marine
+            hull &amp; machinery coverage. They are expressed as a percentage of the vessel's
+            insured value and are set by the London insurance market (Lloyd's) and other underwriters.
+        </p>
+        <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;margin-top:0.75rem;">
+            <strong style="color:var(--text-primary);">Data sources:</strong> Lloyd's List, Marsh,
+            S&amp;P Global, Maritime Executive, industry broker reports.
+        </p>
+    </div>
+</div>
+
+<div class="last-updated" id="last-updated"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
