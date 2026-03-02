@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bakery Management Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bakery.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍞</text></svg>">
+</head>
+<body>
+
+    <!-- ======== HEADER / STATS BAR ======== -->
+    <header class="game-header">
+        <div class="bakery-title">
+            <span class="icon">🧑‍🍳</span>
+            <span>My Bakery</span>
+        </div>
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="stat-icon">🍞</span>
+                <span>Breads:</span>
+                <span class="stat-value" id="stat-breads">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">🎟️</span>
+                <span>Lottery:</span>
+                <span class="stat-value" id="stat-chances">5</span>
+            </div>
+            <div class="stat-item speed-badge" id="speed-badge">
+                <span class="stat-icon">⚡</span>
+                <span>2x SPEED!</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ======== MAIN GAME LAYOUT ======== -->
+    <div class="game-container">
+
+        <!-- ---- LEFT: Inventory ---- -->
+        <div class="panel inventory-panel">
+            <div class="panel-header">
+                <span>📦</span> Inventory
+            </div>
+            <div class="panel-body">
+                <div class="material-list" id="material-list">
+                    <!-- Rendered by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ---- CENTER: Recipes ---- -->
+        <div class="panel recipes-panel">
+            <div class="panel-header">
+                <span>📖</span> Recipes
+            </div>
+            <div class="panel-body">
+                <div class="recipes-grid" id="recipes-grid">
+                    <!-- Rendered by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ---- RIGHT: Lottery + Log ---- -->
+        <div class="panel lottery-panel">
+            <div class="panel-header">
+                <span>🎰</span> Material Lottery
+            </div>
+            <div class="panel-body">
+                <div class="lottery-section">
+                    <div class="lottery-chances" id="lottery-chances-display">5</div>
+                    <div class="lottery-label">chances remaining</div>
+                    <button class="lottery-btn" id="lottery-btn" onclick="BakeryGame.spinLottery()">
+                        🎰 Spin Lottery!
+                    </button>
+                    <div class="lottery-result" id="lottery-result">
+                        <div style="color:var(--text-muted);font-size:0.85rem;">
+                            Spin to receive random baking materials!
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bread Log -->
+                <div class="bread-log">
+                    <div class="bread-log-title">🗒️ Bread Log</div>
+                    <div class="bread-log-list" id="bread-log-list">
+                        <div class="bread-log-entry" style="color:var(--text-muted);">No breads baked yet...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======== OVEN PROGRESS OVERLAY ======== -->
+    <div class="oven-overlay" id="oven-overlay">
+        <div class="oven-text">🔥 Baking in the oven...</div>
+        <div class="oven-bread-name"></div>
+        <div class="oven-progress">
+            <div class="oven-progress-bar"></div>
+        </div>
+    </div>
+
+    <!-- ======== TETRIS OVERLAY ======== -->
+    <div class="tetris-overlay" id="tetris-overlay">
+        <div class="tetris-container">
+            <div class="tetris-main">
+                <div class="tetris-title">🧩 Croissant Bonus: Tetris!</div>
+                <div class="tetris-subtitle">Score 100 points to earn a SUPER SPEED upgrade!</div>
+                <canvas id="tetris-canvas"></canvas>
+                <div style="display:flex;gap:10px;">
+                    <button class="tetris-btn tetris-start-btn" id="tetris-start-btn"
+                            onclick="BakeryGame.startTetrisGame()">
+                        ▶ Start Game
+                    </button>
+                    <button class="tetris-btn tetris-close-btn" id="tetris-close-btn"
+                            onclick="BakeryGame.closeTetris()">
+                        ✕ Skip
+                    </button>
+                </div>
+            </div>
+            <div class="tetris-sidebar">
+                <div class="tetris-goal">
+                    <div class="tetris-goal-label">🎯 Goal</div>
+                    <div class="tetris-goal-value">100 pts</div>
+                </div>
+                <div class="tetris-info-box">
+                    <div class="tetris-info-label">Score</div>
+                    <div class="tetris-info-value" id="tetris-score">0</div>
+                </div>
+                <div class="tetris-info-box">
+                    <div class="tetris-info-label">Lines</div>
+                    <div class="tetris-info-value" id="tetris-lines">0</div>
+                </div>
+                <div class="tetris-info-box tetris-next-box">
+                    <div class="tetris-info-label">Next</div>
+                    <canvas id="tetris-next-canvas"></canvas>
+                </div>
+                <div class="tetris-controls-info">
+                    <kbd>←</kbd> <kbd>→</kbd> Move<br>
+                    <kbd>↑</kbd> Rotate<br>
+                    <kbd>↓</kbd> Soft Drop<br>
+                    <kbd>Space</kbd> Hard Drop
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======== CELEBRATION OVERLAY ======== -->
+    <div class="celebration-overlay" id="celebration-overlay">
+        <div class="celebration-content">
+            <div class="celebration-emoji">🏆</div>
+            <div class="celebration-title">GREAT JOB!</div>
+            <div class="celebration-subtitle">
+                Your bakery has been upgraded!<br>
+                ⚡ Bread making speed is now <strong>2x faster</strong>! ⚡
+            </div>
+            <button class="celebration-dismiss-btn" onclick="BakeryGame.dismissCelebration()">
+                Awesome, let's bake!
+            </button>
+        </div>
+    </div>
+
+    <!-- ======== TOAST NOTIFICATIONS ======== -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- ======== SCRIPTS ======== -->
+    <script src="{{ url_for('static', filename='js/tetris.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bakery.js') }}"></script>
+
+</body>
+</html>

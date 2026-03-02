@@ -1,0 +1,948 @@
+/* ============================================
+   BAKERY MANAGEMENT GAME - Styles
+   Warm, cozy bakery aesthetic
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap');
+
+:root {
+    --bg-dark: #2c1810;
+    --bg-medium: #3d261a;
+    --bg-card: #4a3228;
+    --bg-card-hover: #5a4238;
+    --bg-light: #6b5248;
+    --gold: #f0c040;
+    --gold-dim: #c49a30;
+    --warm-white: #fef3e2;
+    --cream: #f5e6d0;
+    --text-primary: #fef3e2;
+    --text-secondary: #c4a882;
+    --text-muted: #8a7560;
+    --accent-green: #7dce82;
+    --accent-red: #e06060;
+    --accent-blue: #60a0e0;
+    --accent-purple: #b080d0;
+    --accent-orange: #f0a040;
+    --oven-glow: #ff6020;
+    --shadow: rgba(0, 0, 0, 0.4);
+    --bake-time: 3s;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* ---- HEADER ---- */
+.game-header {
+    background: linear-gradient(135deg, var(--bg-medium), var(--bg-dark));
+    border-bottom: 3px solid var(--gold-dim);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.bakery-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.8rem;
+    color: var(--gold);
+    text-shadow: 2px 2px 4px var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.bakery-title .icon {
+    font-size: 2rem;
+}
+
+.stats-bar {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-card);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border: 1px solid var(--bg-light);
+}
+
+.stat-item .stat-icon {
+    font-size: 1.2rem;
+}
+
+.stat-item .stat-value {
+    color: var(--gold);
+    min-width: 20px;
+    text-align: center;
+}
+
+.speed-badge {
+    background: linear-gradient(135deg, #ff8c00, #ff4500);
+    border: 1px solid #ff6020;
+    animation: pulse-glow 1.5s ease-in-out infinite;
+    display: none;
+}
+
+.speed-badge.active {
+    display: flex;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 5px rgba(255, 96, 32, 0.3); }
+    50% { box-shadow: 0 0 15px rgba(255, 96, 32, 0.6); }
+}
+
+/* ---- MAIN LAYOUT ---- */
+.game-container {
+    display: grid;
+    grid-template-columns: 260px 1fr 280px;
+    gap: 16px;
+    padding: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+    min-height: calc(100vh - 70px);
+}
+
+/* ---- PANELS ---- */
+.panel {
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--bg-light);
+    overflow: hidden;
+}
+
+.panel-header {
+    background: var(--bg-medium);
+    padding: 10px 16px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem;
+    color: var(--gold);
+    border-bottom: 2px solid var(--gold-dim);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.panel-body {
+    padding: 12px;
+}
+
+/* ---- INVENTORY PANEL (Left) ---- */
+.inventory-panel {
+    align-self: start;
+    position: sticky;
+    top: 16px;
+}
+
+.material-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.material-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: var(--bg-medium);
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.material-row:hover {
+    background: var(--bg-light);
+}
+
+.material-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.material-emoji {
+    font-size: 1.3rem;
+    width: 28px;
+    text-align: center;
+}
+
+.material-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.material-count {
+    font-weight: 800;
+    font-size: 1rem;
+    color: var(--gold);
+    background: var(--bg-dark);
+    padding: 2px 10px;
+    border-radius: 12px;
+    min-width: 32px;
+    text-align: center;
+}
+
+.material-row.highlight {
+    animation: material-flash 0.6s ease;
+}
+
+@keyframes material-flash {
+    0% { background: var(--gold); }
+    100% { background: var(--bg-medium); }
+}
+
+/* ---- RECIPES PANEL (Center) ---- */
+.recipes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.recipe-card {
+    background: var(--bg-medium);
+    border-radius: 10px;
+    padding: 14px;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+}
+
+.recipe-card.can-bake {
+    border-color: var(--accent-green);
+    cursor: pointer;
+}
+
+.recipe-card.can-bake:hover {
+    background: var(--bg-card-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(125, 206, 130, 0.2);
+}
+
+.recipe-card.baking {
+    border-color: var(--oven-glow);
+    pointer-events: none;
+}
+
+.recipe-name {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.05rem;
+    color: var(--cream);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.recipe-name .bread-emoji {
+    font-size: 1.5rem;
+}
+
+.recipe-ingredients {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.ingredient-tag {
+    font-size: 0.78rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--bg-dark);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.ingredient-tag.has {
+    color: var(--accent-green);
+    border: 1px solid rgba(125, 206, 130, 0.3);
+}
+
+.ingredient-tag.missing {
+    color: var(--accent-red);
+    border: 1px solid rgba(224, 96, 96, 0.3);
+}
+
+.bake-btn {
+    width: 100%;
+    padding: 8px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.bake-btn.ready {
+    background: linear-gradient(135deg, var(--accent-green), #50b860);
+    color: var(--bg-dark);
+}
+
+.bake-btn.ready:hover {
+    filter: brightness(1.15);
+    transform: scale(1.02);
+}
+
+.bake-btn.disabled {
+    background: var(--bg-light);
+    color: var(--text-muted);
+    cursor: not-allowed;
+}
+
+/* Baking progress bar */
+.bake-progress {
+    width: 100%;
+    height: 8px;
+    background: var(--bg-dark);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 8px;
+    display: none;
+}
+
+.bake-progress.active {
+    display: block;
+}
+
+.bake-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--oven-glow), var(--gold));
+    border-radius: 4px;
+    transition: width 0.1s linear;
+}
+
+.recipe-card .bake-status {
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--oven-glow);
+    margin-top: 6px;
+    display: none;
+}
+
+.recipe-card.baking .bake-status {
+    display: block;
+    animation: bake-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes bake-pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+.recipe-card .croissant-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--accent-purple);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ---- LOTTERY PANEL (Right) ---- */
+.lottery-panel {
+    align-self: start;
+    position: sticky;
+    top: 16px;
+}
+
+.lottery-section {
+    text-align: center;
+    padding: 8px 0;
+}
+
+.lottery-chances {
+    font-size: 3rem;
+    font-family: 'Fredoka One', cursive;
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(240, 192, 64, 0.3);
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.lottery-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.lottery-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--gold), var(--accent-orange));
+    color: var(--bg-dark);
+}
+
+.lottery-btn:hover:not(:disabled) {
+    transform: scale(1.03);
+    box-shadow: 0 4px 20px rgba(240, 192, 64, 0.4);
+}
+
+.lottery-btn:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+.lottery-btn:disabled {
+    background: var(--bg-light);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.lottery-btn.spinning {
+    animation: spin-shake 0.5s ease;
+}
+
+@keyframes spin-shake {
+    0%, 100% { transform: rotate(0deg); }
+    20% { transform: rotate(-5deg); }
+    40% { transform: rotate(5deg); }
+    60% { transform: rotate(-3deg); }
+    80% { transform: rotate(3deg); }
+}
+
+/* Lottery result display */
+.lottery-result {
+    margin-top: 16px;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.lottery-result-title {
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.lottery-items {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.lottery-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 10px;
+    background: var(--bg-medium);
+    border-radius: 10px;
+    border: 2px solid var(--gold-dim);
+    animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.lottery-item .item-emoji {
+    font-size: 1.8rem;
+}
+
+.lottery-item .item-name {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+@keyframes pop-in {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* ---- BREAD LOG ---- */
+.bread-log {
+    margin-top: 12px;
+    border-top: 1px solid var(--bg-light);
+    padding-top: 12px;
+}
+
+.bread-log-title {
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.bread-log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.bread-log-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.bread-log-list::-webkit-scrollbar-thumb {
+    background: var(--bg-light);
+    border-radius: 2px;
+}
+
+.bread-log-entry {
+    font-size: 0.82rem;
+    padding: 4px 8px;
+    background: var(--bg-medium);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    animation: slide-in 0.3s ease;
+}
+
+@keyframes slide-in {
+    0% { transform: translateX(-10px); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
+}
+
+/* ---- OVEN OVERLAY (during baking) ---- */
+.oven-overlay {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-card);
+    border: 2px solid var(--oven-glow);
+    border-radius: 16px;
+    padding: 16px 32px;
+    z-index: 50;
+    box-shadow: 0 0 40px rgba(255, 96, 32, 0.3);
+    text-align: center;
+    min-width: 280px;
+}
+
+.oven-overlay.active {
+    display: block;
+    animation: oven-rise 0.4s ease;
+}
+
+@keyframes oven-rise {
+    0% { transform: translateX(-50%) translateY(20px); opacity: 0; }
+    100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+.oven-text {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem;
+    color: var(--oven-glow);
+    margin-bottom: 8px;
+}
+
+.oven-bread-name {
+    font-size: 0.9rem;
+    color: var(--cream);
+    margin-bottom: 10px;
+}
+
+.oven-progress {
+    width: 100%;
+    height: 12px;
+    background: var(--bg-dark);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.oven-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--oven-glow), var(--gold));
+    border-radius: 6px;
+}
+
+/* Super speed oven glow */
+.oven-overlay.super-speed {
+    border-color: var(--gold);
+    box-shadow: 0 0 60px rgba(240, 192, 64, 0.4);
+}
+
+.oven-overlay.super-speed .oven-text {
+    color: var(--gold);
+}
+
+/* ---- TETRIS OVERLAY ---- */
+.tetris-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.tetris-overlay.active {
+    display: flex;
+}
+
+.tetris-container {
+    background: var(--bg-card);
+    border-radius: 16px;
+    border: 2px solid var(--accent-purple);
+    padding: 24px;
+    display: flex;
+    gap: 24px;
+    box-shadow: 0 0 60px rgba(176, 128, 208, 0.3);
+}
+
+.tetris-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.tetris-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.4rem;
+    color: var(--accent-purple);
+}
+
+.tetris-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+#tetris-canvas {
+    border: 2px solid var(--bg-light);
+    border-radius: 4px;
+    background: #1a1a2e;
+}
+
+.tetris-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 140px;
+}
+
+.tetris-info-box {
+    background: var(--bg-medium);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+}
+
+.tetris-info-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.tetris-info-value {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.8rem;
+    color: var(--gold);
+}
+
+.tetris-goal {
+    background: var(--bg-medium);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+    border: 1px solid var(--accent-purple);
+}
+
+.tetris-goal-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent-purple);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+}
+
+.tetris-goal-value {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.2rem;
+    color: var(--accent-purple);
+}
+
+.tetris-next-box {
+    text-align: center;
+}
+
+#tetris-next-canvas {
+    border: 1px solid var(--bg-light);
+    border-radius: 4px;
+    background: #1a1a2e;
+    margin-top: 4px;
+}
+
+.tetris-controls-info {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.6;
+}
+
+.tetris-controls-info kbd {
+    background: var(--bg-light);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+}
+
+.tetris-btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tetris-close-btn {
+    background: var(--accent-red);
+    color: white;
+    margin-top: 8px;
+}
+
+.tetris-close-btn:hover {
+    filter: brightness(1.15);
+    transform: scale(1.03);
+}
+
+.tetris-start-btn {
+    background: linear-gradient(135deg, var(--accent-purple), #9060b0);
+    color: white;
+}
+
+.tetris-start-btn:hover {
+    filter: brightness(1.15);
+    transform: scale(1.03);
+}
+
+/* ---- UPGRADE CELEBRATION ---- */
+.celebration-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+}
+
+.celebration-overlay.active {
+    display: flex;
+}
+
+.celebration-content {
+    text-align: center;
+    animation: celebrate-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes celebrate-pop {
+    0% { transform: scale(0.3); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.celebration-emoji {
+    font-size: 5rem;
+    animation: celebrate-bounce 0.8s ease infinite;
+}
+
+@keyframes celebrate-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+.celebration-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2.5rem;
+    color: var(--gold);
+    text-shadow: 0 0 30px rgba(240, 192, 64, 0.5);
+    margin: 16px 0 8px;
+}
+
+.celebration-subtitle {
+    font-size: 1.1rem;
+    color: var(--cream);
+    margin-bottom: 24px;
+}
+
+.celebration-dismiss-btn {
+    padding: 12px 40px;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--gold), var(--accent-orange));
+    color: var(--bg-dark);
+    transition: all 0.2s;
+}
+
+.celebration-dismiss-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 20px rgba(240, 192, 64, 0.4);
+}
+
+/* ---- TOAST NOTIFICATIONS ---- */
+.toast-container {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.toast {
+    background: var(--bg-card);
+    border: 1px solid var(--bg-light);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 4px 16px var(--shadow);
+    animation: toast-in 0.3s ease, toast-out 0.3s ease 2.5s forwards;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 300px;
+}
+
+.toast.success {
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+}
+
+.toast.info {
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+}
+
+.toast.special {
+    border-color: var(--accent-purple);
+    color: var(--accent-purple);
+}
+
+@keyframes toast-in {
+    0% { transform: translateX(100px); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes toast-out {
+    0% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-10px); }
+}
+
+/* ---- RESPONSIVE ---- */
+@media (max-width: 1100px) {
+    .game-container {
+        grid-template-columns: 1fr 1fr;
+    }
+    .inventory-panel {
+        position: static;
+    }
+    .lottery-panel {
+        position: static;
+    }
+    .recipes-panel {
+        grid-column: 1 / -1;
+        order: 3;
+    }
+}
+
+@media (max-width: 700px) {
+    .game-container {
+        grid-template-columns: 1fr;
+    }
+    .game-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    .stats-bar {
+        justify-content: center;
+    }
+    .bakery-title {
+        font-size: 1.4rem;
+    }
+    .recipes-grid {
+        grid-template-columns: 1fr;
+    }
+    .tetris-container {
+        flex-direction: column;
+        padding: 16px;
+    }
+    .tetris-sidebar {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+/* ---- SCROLLBAR ---- */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--bg-light);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
