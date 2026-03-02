@@ -85,6 +85,11 @@ def admin():
     return render_template("admin.html")
 
 
+@app.route("/bakery")
+def bakery():
+    return render_template("bakery.html")
+
+
 # --------------- API: Rates ---------------
 
 @app.route("/api/rates")
