@@ -4,11 +4,12 @@ import os
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "hormuz-tracker-dev-key")
     ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "hormuz2026")
+    CRON_SECRET = os.environ.get("CRON_SECRET", "hormuz-cron-secret")
     GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "")
     FIRESTORE_COLLECTION_RATES = "premium_rates"
     FIRESTORE_COLLECTION_NEWS = "news_events"
     FIRESTORE_COLLECTION_RISK = "risk_assessment"
-    SCRAPE_INTERVAL_HOURS = int(os.environ.get("SCRAPE_INTERVAL_HOURS", "6"))
+    FIRESTORE_COLLECTION_META = "app_meta"
     PORT = int(os.environ.get("PORT", "8080"))
 
     # Vessel reference values for cost estimation (USD)

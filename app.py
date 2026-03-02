@@ -1,8 +1,7 @@
 import logging
-import os
+import threading
 from functools import wraps
 
-from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, jsonify, render_template, request
 
 from config import Config
@@ -16,7 +15,39 @@ app = Flask(__name__)
 app.config.from_object(Config)
 
 
-# --------------- Auth helper ---------------
+# --------------- Auto-seed on startup ---------------
+
+_seed_lock = threading.Lock()
+_seed_done = False
+
+
+def _auto_seed_if_needed():
+    """Seed historical data on first startup if DB is empty."""
+    global _seed_done
+    if _seed_done:
+        return
+    with _seed_lock:
+        if _seed_done:
+            return
+        try:
+            if not db.is_seeded() and db.is_db_empty():
+                logger.info("Empty database detected — auto-seeding historical data...")
+                from seed_data import main as run_seed
+                run_seed()
+                db.mark_seeded()
+                logger.info("Auto-seed complete.")
+            else:
+                logger.info("Database already seeded.")
+        except Exception as e:
+            logger.error("Auto-seed failed: %s", e)
+        _seed_done = True
+
+
+# Run auto-seed in a background thread so startup isn't blocked
+threading.Thread(target=_auto_seed_if_needed, daemon=True).start()
+
+
+# --------------- Auth helpers ---------------
 
 def require_admin(f):
     @wraps(f)
@@ -25,6 +56,20 @@ def require_admin(f):
         if password != app.config["ADMIN_PASSWORD"]:
             return jsonify({"error": "Unauthorized"}), 401
         return f(*args, **kwargs)
+    return decorated
+
+
+def require_cron_or_admin(f):
+    """Accept either the cron secret (from Cloud Scheduler) or admin password."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        cron_secret = request.headers.get("X-Cron-Secret")
+        admin_pw = request.headers.get("X-Admin-Password") or request.form.get("password")
+        if cron_secret == app.config["CRON_SECRET"]:
+            return f(*args, **kwargs)
+        if admin_pw == app.config["ADMIN_PASSWORD"]:
+            return f(*args, **kwargs)
+        return jsonify({"error": "Unauthorized"}), 401
     return decorated
 
 
@@ -131,15 +176,6 @@ def api_set_risk():
     return jsonify({"status": "ok"})
 
 
-# --------------- API: Scrape trigger ---------------
-
-@app.route("/api/scrape", methods=["POST"])
-@require_admin
-def api_trigger_scrape():
-    result = scrape_all_sources()
-    return jsonify(result)
-
-
 # --------------- API: Transit cost estimates ---------------
 
 @app.route("/api/costs")
@@ -158,28 +194,38 @@ def api_get_costs():
     return jsonify(costs)
 
 
-# --------------- Scheduler ---------------
+# --------------- Cron endpoints (Cloud Scheduler) ---------------
 
-def scheduled_scrape():
-    logger.info("Running scheduled news scrape...")
-    try:
-        result = scrape_all_sources()
-        logger.info("Scrape complete: %s", result)
-    except Exception as e:
-        logger.error("Scheduled scrape failed: %s", e)
+@app.route("/cron/scrape", methods=["POST"])
+@require_cron_or_admin
+def cron_scrape():
+    """
+    Automated scrape endpoint called by Cloud Scheduler every 4 hours.
+    Full pipeline: scrape sources -> extract rates -> classify news -> update risk.
+    """
+    logger.info("Cron scrape triggered")
+    result = scrape_all_sources()
+    return jsonify(result)
 
 
-scheduler = BackgroundScheduler()
-scheduler.add_job(
-    scheduled_scrape,
-    "interval",
-    hours=Config.SCRAPE_INTERVAL_HOURS,
-    id="news_scrape",
-)
+@app.route("/cron/seed", methods=["POST"])
+@require_cron_or_admin
+def cron_seed():
+    """Trigger seed manually or from deploy script."""
+    _auto_seed_if_needed()
+    return jsonify({"status": "ok", "seeded": db.is_seeded()})
+
+
+# --------------- API: Manual scrape trigger (admin) ---------------
+
+@app.route("/api/scrape", methods=["POST"])
+@require_admin
+def api_trigger_scrape():
+    result = scrape_all_sources()
+    return jsonify(result)
 
 
 # --------------- Main ---------------
 
 if __name__ == "__main__":
-    scheduler.start()
     app.run(host="0.0.0.0", port=Config.PORT, debug=True)

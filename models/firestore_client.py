@@ -1,14 +1,20 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from google.cloud import firestore
 
 from config import Config
 
+_db_instance = None
+
 
 def _get_db():
-    if Config.GCP_PROJECT_ID:
-        return firestore.Client(project=Config.GCP_PROJECT_ID)
-    return firestore.Client()
+    global _db_instance
+    if _db_instance is None:
+        if Config.GCP_PROJECT_ID:
+            _db_instance = firestore.Client(project=Config.GCP_PROJECT_ID)
+        else:
+            _db_instance = firestore.Client()
+    return _db_instance
 
 
 # --------------- Premium Rates ---------------
@@ -68,6 +74,22 @@ def delete_rate(doc_id: str):
     db.collection(Config.FIRESTORE_COLLECTION_RATES).document(doc_id).delete()
 
 
+def rate_exists_for_date(date_str: str, vessel_type: str = "standard") -> bool:
+    """Check if a rate already exists for a given date (to prevent duplicates)."""
+    db = _get_db()
+    target = datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc)
+    window_start = target - timedelta(hours=12)
+    window_end = target + timedelta(hours=12)
+    query = (
+        db.collection(Config.FIRESTORE_COLLECTION_RATES)
+        .where("vessel_type", "==", vessel_type)
+        .where("date", ">=", window_start)
+        .where("date", "<=", window_end)
+        .limit(1)
+    )
+    return any(True for _ in query.stream())
+
+
 # --------------- News / Events ---------------
 
 def add_news(title: str, source: str, url: str, summary: str,
@@ -115,6 +137,31 @@ def news_url_exists(url: str) -> bool:
     return any(True for _ in query.stream())
 
 
+def news_title_exists(title: str) -> bool:
+    db = _get_db()
+    query = (
+        db.collection(Config.FIRESTORE_COLLECTION_NEWS)
+        .where("title", "==", title)
+        .limit(1)
+    )
+    return any(True for _ in query.stream())
+
+
+def count_recent_news_by_impact(days: int = 7) -> dict:
+    """Count news items by impact in the last N days."""
+    db = _get_db()
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    query = (
+        db.collection(Config.FIRESTORE_COLLECTION_NEWS)
+        .where("date", ">=", cutoff)
+    )
+    counts = {"negative": 0, "positive": 0, "neutral": 0}
+    for doc in query.stream():
+        impact = doc.to_dict().get("impact", "neutral")
+        counts[impact] = counts.get(impact, 0) + 1
+    return counts
+
+
 # --------------- Risk Assessment ---------------
 
 def get_risk_level():
@@ -143,3 +190,25 @@ def set_risk_level(level: str, factors: list):
         "factors": factors,
         "last_updated": firestore.SERVER_TIMESTAMP,
     })
+
+
+# --------------- App Meta (seeding flag) ---------------
+
+def is_seeded() -> bool:
+    db = _get_db()
+    doc = db.collection(Config.FIRESTORE_COLLECTION_META).document("seed_status").get()
+    return doc.exists and doc.to_dict().get("seeded", False)
+
+
+def mark_seeded():
+    db = _get_db()
+    db.collection(Config.FIRESTORE_COLLECTION_META).document("seed_status").set({
+        "seeded": True,
+        "seeded_at": firestore.SERVER_TIMESTAMP,
+    })
+
+
+def is_db_empty() -> bool:
+    db = _get_db()
+    query = db.collection(Config.FIRESTORE_COLLECTION_RATES).limit(1)
+    return not any(True for _ in query.stream())

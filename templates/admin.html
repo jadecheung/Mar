@@ -110,15 +110,26 @@
         </form>
     </div>
 
-    <!-- Scrape trigger -->
-    <h2>News Scraper</h2>
+    <!-- Automation Status -->
+    <h2>Automation Status</h2>
     <div class="card">
-        <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem;">
-            Trigger a manual scrape of configured news sources. Auto-scrape runs every
-            {{ config.SCRAPE_INTERVAL_HOURS }} hours.
+        <p style="font-size:0.85rem;color:var(--accent-green);margin-bottom:0.5rem;font-weight:600;">
+            Fully Automated Pipeline Active
         </p>
-        <button class="btn btn-green" id="btn-scrape">Run News Scrape Now</button>
-        <div id="scrape-result" style="margin-top:0.75rem;font-size:0.85rem;color:var(--text-secondary);"></div>
+        <ul style="font-size:0.85rem;color:var(--text-secondary);line-height:2;padding-left:1.2rem;">
+            <li>Cloud Scheduler triggers scrape every <strong style="color:var(--text-primary);">4 hours</strong></li>
+            <li>Google News RSS + 11 maritime news sources scraped automatically</li>
+            <li>Premium rates auto-extracted from article text via NLP/regex</li>
+            <li>Risk level auto-computed from news sentiment + rate trends</li>
+            <li>Historical data auto-seeded on first deploy</li>
+        </ul>
+        <div style="margin-top:1rem;border-top:1px solid var(--border-color);padding-top:1rem;">
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.75rem;">
+                Trigger a manual scrape (same as automated pipeline):
+            </p>
+            <button class="btn btn-green" id="btn-scrape">Run Full Pipeline Now</button>
+            <div id="scrape-result" style="margin-top:0.75rem;font-size:0.85rem;color:var(--text-secondary);"></div>
+        </div>
     </div>
 
     <!-- Existing rates -->
@@ -229,7 +240,9 @@ document.getElementById('btn-scrape').addEventListener('click', async () => {
     try {
         const resp = await adminFetch('/api/scrape', { method: 'POST' });
         const data = await resp.json();
-        el.textContent = `Done. Found ${data.total_found} articles, added ${data.new_added} new.`;
+        el.textContent = `Done. Found ${data.total_found} articles, added ${data.new_added} new. ` +
+            `Rates extracted: ${data.rates_extracted || 0}. Risk: ${(data.risk_level || 'n/a').toUpperCase()} (score: ${data.risk_score || 'n/a'})`;
+        loadExistingRates();
     } catch (e) {
         el.textContent = 'Scrape failed.';
     }
