@@ -1,5 +1,4 @@
 import logging
-import threading
 from functools import wraps
 
 from flask import Flask, jsonify, render_template, request
@@ -14,37 +13,29 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.config.from_object(Config)
 
-
-# --------------- Auto-seed on startup ---------------
-
-_seed_lock = threading.Lock()
-_seed_done = False
+_seeded = False
 
 
-def _auto_seed_if_needed():
-    """Seed historical data on first startup if DB is empty."""
-    global _seed_done
-    if _seed_done:
+def _ensure_seeded():
+    """Seed on first request if DB is empty. Runs once."""
+    global _seeded
+    if _seeded:
         return
-    with _seed_lock:
-        if _seed_done:
-            return
-        try:
-            if not db.is_seeded() and db.is_db_empty():
-                logger.info("Empty database detected — auto-seeding historical data...")
-                from seed_data import main as run_seed
-                run_seed()
-                db.mark_seeded()
-                logger.info("Auto-seed complete.")
-            else:
-                logger.info("Database already seeded.")
-        except Exception as e:
-            logger.error("Auto-seed failed: %s", e)
-        _seed_done = True
+    _seeded = True
+    try:
+        if not db.is_seeded() and db.is_db_empty():
+            logger.info("Empty database detected — auto-seeding...")
+            from seed_data import main as run_seed
+            run_seed()
+            db.mark_seeded()
+            logger.info("Auto-seed complete.")
+    except Exception as e:
+        logger.error("Auto-seed failed: %s", e)
 
 
-# Run auto-seed in a background thread so startup isn't blocked
-threading.Thread(target=_auto_seed_if_needed, daemon=True).start()
+@app.before_request
+def before_request():
+    _ensure_seeded()
 
 
 # --------------- Auth helpers ---------------
@@ -60,7 +51,6 @@ def require_admin(f):
 
 
 def require_cron_or_admin(f):
-    """Accept either the cron secret (from Cloud Scheduler) or admin password."""
     @wraps(f)
     def decorated(*args, **kwargs):
         cron_secret = request.headers.get("X-Cron-Secret")
@@ -85,22 +75,34 @@ def admin():
     return render_template("admin.html")
 
 
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"})
+
+
 # --------------- API: Rates ---------------
 
 @app.route("/api/rates")
 def api_get_rates():
     vessel_type = request.args.get("vessel_type", "standard")
     limit = int(request.args.get("limit", "500"))
-    rates = db.get_rates(vessel_type=vessel_type, limit=limit)
-    return jsonify(rates)
+    try:
+        rates = db.get_rates(vessel_type=vessel_type, limit=limit)
+        return jsonify(rates)
+    except Exception as e:
+        logger.error("api_get_rates error: %s", e)
+        return jsonify([])
 
 
 @app.route("/api/rates/latest")
 def api_get_latest_rate():
     vessel_type = request.args.get("vessel_type", "standard")
-    rate = db.get_latest_rate(vessel_type=vessel_type)
-    if rate:
-        return jsonify(rate)
+    try:
+        rate = db.get_latest_rate(vessel_type=vessel_type)
+        if rate:
+            return jsonify(rate)
+    except Exception as e:
+        logger.error("api_get_latest_rate error: %s", e)
     return jsonify({"error": "No rates found"}), 404
 
 
@@ -134,8 +136,12 @@ def api_delete_rate(doc_id):
 @app.route("/api/news")
 def api_get_news():
     limit = int(request.args.get("limit", "50"))
-    news = db.get_news(limit=limit)
-    return jsonify(news)
+    try:
+        news = db.get_news(limit=limit)
+        return jsonify(news)
+    except Exception as e:
+        logger.error("api_get_news error: %s", e)
+        return jsonify([])
 
 
 @app.route("/api/news", methods=["POST"])
@@ -161,7 +167,11 @@ def api_add_news():
 
 @app.route("/api/risk")
 def api_get_risk():
-    return jsonify(db.get_risk_level())
+    try:
+        return jsonify(db.get_risk_level())
+    except Exception as e:
+        logger.error("api_get_risk error: %s", e)
+        return jsonify({"level": "high", "factors": ["Data loading..."]})
 
 
 @app.route("/api/risk", methods=["POST"])
@@ -180,8 +190,11 @@ def api_set_risk():
 
 @app.route("/api/costs")
 def api_get_costs():
-    rate_data = db.get_latest_rate(vessel_type="standard")
-    rate = rate_data["rate_percent"] if rate_data else 0.5
+    try:
+        rate_data = db.get_latest_rate(vessel_type="standard")
+        rate = rate_data["rate_percent"] if rate_data else 0.5
+    except Exception:
+        rate = 0.5
     costs = []
     for name, value in Config.VESSEL_VALUES.items():
         premium_usd = value * (rate / 100)
@@ -199,10 +212,6 @@ def api_get_costs():
 @app.route("/cron/scrape", methods=["POST"])
 @require_cron_or_admin
 def cron_scrape():
-    """
-    Automated scrape endpoint called by Cloud Scheduler every 4 hours.
-    Full pipeline: scrape sources -> extract rates -> classify news -> update risk.
-    """
     logger.info("Cron scrape triggered")
     result = scrape_all_sources()
     return jsonify(result)
@@ -211,8 +220,7 @@ def cron_scrape():
 @app.route("/cron/seed", methods=["POST"])
 @require_cron_or_admin
 def cron_seed():
-    """Trigger seed manually or from deploy script."""
-    _auto_seed_if_needed()
+    _ensure_seeded()
     return jsonify({"status": "ok", "seeded": db.is_seeded()})
 
 
