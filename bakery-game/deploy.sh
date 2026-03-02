@@ -14,6 +14,10 @@
 
 set -euo pipefail
 
+# Always deploy from this script's directory (the bakery-game folder)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
 PROJECT_ID="${1:?Usage: ./deploy.sh <PROJECT_ID> [REGION] [SERVICE_NAME]}"
 REGION="${2:-us-central1}"
 SERVICE_NAME="${3:-bakery-game}"
