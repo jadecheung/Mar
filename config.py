@@ -10,6 +10,8 @@ class Config:
     FIRESTORE_COLLECTION_NEWS = "news_events"
     FIRESTORE_COLLECTION_RISK = "risk_assessment"
     FIRESTORE_COLLECTION_META = "app_meta"
+    FIRESTORE_COLLECTION_STRIKES = "iranian_strikes"
+    FIRESTORE_COLLECTION_STRIKE_SUMMARY = "strike_summary"
     PORT = int(os.environ.get("PORT", "8080"))
 
     # Vessel reference values for cost estimation (USD)

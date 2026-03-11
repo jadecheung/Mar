@@ -105,6 +105,31 @@ else
         --quiet
 fi
 
+# Create Cloud Scheduler job for daily strikes scrape
+STRIKES_JOB="${SERVICE_NAME}-strikes-scrape"
+echo "[5b/7] Setting up Cloud Scheduler for daily strikes scrape..."
+if gcloud scheduler jobs describe "$STRIKES_JOB" --location="$REGION" 2>/dev/null; then
+    echo "Updating existing strikes scheduler job..."
+    gcloud scheduler jobs update http "$STRIKES_JOB" \
+        --location="$REGION" \
+        --schedule="0 6 * * *" \
+        --uri="${SERVICE_URL}/cron/scrape-strikes" \
+        --http-method=POST \
+        --headers="X-Cron-Secret=$CRON_SECRET" \
+        --attempt-deadline=300s \
+        --quiet
+else
+    echo "Creating new strikes scheduler job..."
+    gcloud scheduler jobs create http "$STRIKES_JOB" \
+        --location="$REGION" \
+        --schedule="0 6 * * *" \
+        --uri="${SERVICE_URL}/cron/scrape-strikes" \
+        --http-method=POST \
+        --headers="X-Cron-Secret=$CRON_SECRET" \
+        --attempt-deadline=300s \
+        --quiet
+fi
+
 # Trigger seed (app auto-seeds on first startup, but this ensures it)
 echo "[6/7] Triggering initial data seed..."
 curl -s -X POST "${SERVICE_URL}/cron/seed" \
@@ -121,14 +146,16 @@ echo " Deployment complete! Fully automated."
 echo "============================================="
 echo ""
 echo " Dashboard:    $SERVICE_URL"
+echo " Strikes:      $SERVICE_URL/strikes"
 echo " Admin panel:  $SERVICE_URL/admin"
 echo ""
 echo " Admin password:  $ADMIN_PASSWORD"
 echo " Cron secret:     $CRON_SECRET"
 echo ""
 echo " Automation:"
-echo "   - Cloud Scheduler runs every 4 hours"
+echo "   - Cloud Scheduler runs every 4 hours (insurance) + daily at 06:00 (strikes)"
 echo "   - Auto-scrapes Google News RSS + 11 maritime sources"
+echo "   - Iranian strikes tracker with daily refresh"
 echo "   - Auto-extracts premium rates from article text"
 echo "   - Auto-computes risk level from news sentiment"
 echo "   - Auto-seeded historical data (Sept 2023 - Mar 2026)"

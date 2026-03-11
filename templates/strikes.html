@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Iranian Strikes Tracker — Hormuz Premium Tracker{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<!-- KPI row -->
+<div class="dashboard-grid">
+    <div class="card">
+        <h3>Total Launched</h3>
+        <div class="big-number" style="color:var(--accent-red)" id="total-launched">--</div>
+        <div class="source-label" id="total-events">-- strike events tracked</div>
+    </div>
+
+    <div class="card">
+        <h3>Total Intercepted</h3>
+        <div class="big-number" style="color:var(--accent-green)" id="total-intercepted">--</div>
+        <div class="source-label" id="intercept-rate">--% intercept rate</div>
+    </div>
+
+    <div class="card">
+        <h3>Total Hit / Impacted</h3>
+        <div class="big-number" style="color:var(--accent-orange)" id="total-hit">--</div>
+        <div class="source-label" id="hit-rate">--% hit rate</div>
+    </div>
+
+    <div class="card">
+        <h3>Overall Intercept Rate</h3>
+        <div class="big-number" style="color:var(--accent-blue)" id="overall-intercept-pct">--</div>
+        <div class="source-label">Across all weapon types</div>
+    </div>
+</div>
+
+<!-- Charts row -->
+<div class="dashboard-grid two-col">
+    <div class="card chart-card">
+        <h3>Strike Volume Over Time (Launched vs Intercepted vs Hit)</h3>
+        <canvas id="strikes-timeline-chart"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>Hit Rate by Weapon Type</h3>
+        <canvas id="weapon-type-chart" style="max-height:350px;"></canvas>
+    </div>
+</div>
+
+<!-- Breakdown + Recent strikes -->
+<div class="dashboard-grid two-col">
+    <div class="card">
+        <h3>Breakdown by Weapon Type</h3>
+        <table class="cost-table">
+            <thead>
+                <tr>
+                    <th>Weapon Type</th>
+                    <th>Launched</th>
+                    <th>Intercepted</th>
+                    <th>Hit</th>
+                    <th>Hit Rate</th>
+                    <th>Intercept Rate</th>
+                </tr>
+            </thead>
+            <tbody id="weapon-breakdown-body"></tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3>Recent Strike Events</h3>
+        <div class="news-feed" id="recent-strikes-feed">
+            <div style="color:var(--text-secondary);font-size:0.85rem;">Loading strike data...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Event log -->
+<div class="dashboard-grid" style="grid-template-columns:1fr;">
+    <div class="card">
+        <h3>Full Strike Event Log</h3>
+        <table class="cost-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Operation</th>
+                    <th>Weapon</th>
+                    <th>Target</th>
+                    <th>Launched</th>
+                    <th>Intercepted</th>
+                    <th>Hit</th>
+                    <th>Hit Rate</th>
+                    <th>Source</th>
+                </tr>
+            </thead>
+            <tbody id="strike-log-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="last-updated" id="last-updated"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/strikes.js') }}"></script>
+{% endblock %}

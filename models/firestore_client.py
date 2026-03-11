@@ -230,6 +230,157 @@ def set_risk_level(level: str, factors: list):
     })
 
 
+# --------------- Iranian Strikes ---------------
+
+def add_strike(date_str: str, weapon_type: str, launched: int, intercepted: int,
+               hit: int, target: str = "", source: str = "", notes: str = "",
+               operation: str = ""):
+    db = _get_db()
+    doc_data = {
+        "date": datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc),
+        "weapon_type": weapon_type,
+        "launched": launched,
+        "intercepted": intercepted,
+        "hit": hit,
+        "hit_rate": round(hit / launched * 100, 1) if launched > 0 else 0.0,
+        "target": target,
+        "source": source,
+        "notes": notes,
+        "operation": operation,
+        "created_at": firestore.SERVER_TIMESTAMP,
+    }
+    db.collection(Config.FIRESTORE_COLLECTION_STRIKES).add(doc_data)
+    return doc_data
+
+
+def get_strikes(limit: int = 500):
+    """Get all strikes sorted by date ascending."""
+    db = _get_db()
+    try:
+        query = (
+            db.collection(Config.FIRESTORE_COLLECTION_STRIKES)
+            .order_by("date", direction=firestore.Query.ASCENDING)
+            .limit(limit)
+        )
+        return [_serialize_doc(doc) for doc in query.stream()]
+    except Exception:
+        logger.info("Using client-side sort for get_strikes")
+        query = db.collection(Config.FIRESTORE_COLLECTION_STRIKES).limit(limit)
+        results = [_serialize_doc(doc) for doc in query.stream()]
+        results.sort(key=lambda r: r.get("date", ""))
+        return results
+
+
+def get_strikes_by_type(weapon_type: str, limit: int = 500):
+    """Get strikes filtered by weapon type."""
+    db = _get_db()
+    try:
+        query = (
+            db.collection(Config.FIRESTORE_COLLECTION_STRIKES)
+            .where("weapon_type", "==", weapon_type)
+            .order_by("date", direction=firestore.Query.ASCENDING)
+            .limit(limit)
+        )
+        return [_serialize_doc(doc) for doc in query.stream()]
+    except Exception:
+        logger.info("Using client-side sort for get_strikes_by_type")
+        query = (
+            db.collection(Config.FIRESTORE_COLLECTION_STRIKES)
+            .where("weapon_type", "==", weapon_type)
+            .limit(limit)
+        )
+        results = [_serialize_doc(doc) for doc in query.stream()]
+        results.sort(key=lambda r: r.get("date", ""))
+        return results
+
+
+def get_latest_strikes(limit: int = 10):
+    """Get the most recent strikes."""
+    db = _get_db()
+    try:
+        query = (
+            db.collection(Config.FIRESTORE_COLLECTION_STRIKES)
+            .order_by("date", direction=firestore.Query.DESCENDING)
+            .limit(limit)
+        )
+        return [_serialize_doc(doc) for doc in query.stream()]
+    except Exception:
+        logger.info("Using client-side sort for get_latest_strikes")
+        query = db.collection(Config.FIRESTORE_COLLECTION_STRIKES).limit(limit)
+        results = [_serialize_doc(doc) for doc in query.stream()]
+        results.sort(key=lambda r: r.get("date", ""), reverse=True)
+        return results[:limit]
+
+
+def delete_strike(doc_id: str):
+    db = _get_db()
+    db.collection(Config.FIRESTORE_COLLECTION_STRIKES).document(doc_id).delete()
+
+
+def get_strike_summary():
+    """Compute aggregate strike statistics."""
+    db = _get_db()
+    try:
+        docs = list(db.collection(Config.FIRESTORE_COLLECTION_STRIKES).stream())
+    except Exception as e:
+        logger.warning("get_strike_summary error: %s", e)
+        return {}
+
+    totals = {"launched": 0, "intercepted": 0, "hit": 0}
+    by_type = {}
+
+    for doc in docs:
+        d = doc.to_dict()
+        wt = d.get("weapon_type", "unknown")
+        launched = d.get("launched", 0)
+        intercepted = d.get("intercepted", 0)
+        hit = d.get("hit", 0)
+
+        totals["launched"] += launched
+        totals["intercepted"] += intercepted
+        totals["hit"] += hit
+
+        if wt not in by_type:
+            by_type[wt] = {"launched": 0, "intercepted": 0, "hit": 0}
+        by_type[wt]["launched"] += launched
+        by_type[wt]["intercepted"] += intercepted
+        by_type[wt]["hit"] += hit
+
+    totals["hit_rate"] = round(totals["hit"] / totals["launched"] * 100, 1) if totals["launched"] > 0 else 0.0
+    totals["intercept_rate"] = round(totals["intercepted"] / totals["launched"] * 100, 1) if totals["launched"] > 0 else 0.0
+
+    for wt in by_type:
+        bt = by_type[wt]
+        bt["hit_rate"] = round(bt["hit"] / bt["launched"] * 100, 1) if bt["launched"] > 0 else 0.0
+        bt["intercept_rate"] = round(bt["intercepted"] / bt["launched"] * 100, 1) if bt["launched"] > 0 else 0.0
+
+    return {
+        "totals": totals,
+        "by_type": by_type,
+        "total_events": len(docs),
+    }
+
+
+def strike_exists_for_date(date_str: str, weapon_type: str = "") -> bool:
+    """Check if a strike record exists near a given date."""
+    db = _get_db()
+    target = datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc)
+    window_start = target - timedelta(hours=12)
+    window_end = target + timedelta(hours=12)
+    try:
+        query = db.collection(Config.FIRESTORE_COLLECTION_STRIKES)
+        if weapon_type:
+            query = query.where("weapon_type", "==", weapon_type)
+        for doc in query.stream():
+            d = doc.to_dict()
+            dt = d.get("date")
+            if hasattr(dt, "timestamp") and window_start <= dt <= window_end:
+                return True
+    except Exception as e:
+        logger.warning("strike_exists_for_date error: %s", e)
+    return False
+
+
 # --------------- App Meta (seeding flag) ---------------
 
 def is_seeded() -> bool:

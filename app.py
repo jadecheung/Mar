@@ -6,6 +6,7 @@ from flask import Flask, jsonify, render_template, request
 from config import Config
 from models import firestore_client as db
 from scrapers.news_scraper import scrape_all_sources
+from scrapers.strikes_scraper import scrape_strikes
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -68,6 +69,11 @@ def require_cron_or_admin(f):
 @app.route("/")
 def dashboard():
     return render_template("dashboard.html")
+
+
+@app.route("/strikes")
+def strikes():
+    return render_template("strikes.html")
 
 
 @app.route("/admin")
@@ -207,6 +213,74 @@ def api_get_costs():
     return jsonify(costs)
 
 
+# --------------- API: Iranian Strikes ---------------
+
+@app.route("/api/strikes")
+def api_get_strikes():
+    weapon_type = request.args.get("weapon_type", "")
+    limit = int(request.args.get("limit", "500"))
+    try:
+        if weapon_type:
+            strikes = db.get_strikes_by_type(weapon_type=weapon_type, limit=limit)
+        else:
+            strikes = db.get_strikes(limit=limit)
+        return jsonify(strikes)
+    except Exception as e:
+        logger.error("api_get_strikes error: %s", e)
+        return jsonify([])
+
+
+@app.route("/api/strikes/latest")
+def api_get_latest_strikes():
+    limit = int(request.args.get("limit", "10"))
+    try:
+        return jsonify(db.get_latest_strikes(limit=limit))
+    except Exception as e:
+        logger.error("api_get_latest_strikes error: %s", e)
+        return jsonify([])
+
+
+@app.route("/api/strikes/summary")
+def api_get_strike_summary():
+    try:
+        return jsonify(db.get_strike_summary())
+    except Exception as e:
+        logger.error("api_get_strike_summary error: %s", e)
+        return jsonify({"totals": {}, "by_type": {}, "total_events": 0})
+
+
+@app.route("/api/strikes", methods=["POST"])
+@require_admin
+def api_add_strike():
+    data = request.get_json() or request.form
+    required = ["date", "weapon_type", "launched"]
+    for field in required:
+        if field not in data:
+            return jsonify({"error": f"Missing field: {field}"}), 400
+    launched = int(data["launched"])
+    intercepted = int(data.get("intercepted", 0))
+    hit = int(data.get("hit", max(0, launched - intercepted)))
+    db.add_strike(
+        date_str=data["date"],
+        weapon_type=data["weapon_type"],
+        launched=launched,
+        intercepted=intercepted,
+        hit=hit,
+        target=data.get("target", ""),
+        source=data.get("source", ""),
+        notes=data.get("notes", ""),
+        operation=data.get("operation", ""),
+    )
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/strikes/<doc_id>", methods=["DELETE"])
+@require_admin
+def api_delete_strike(doc_id):
+    db.delete_strike(doc_id)
+    return jsonify({"status": "ok"})
+
+
 # --------------- Cron endpoints (Cloud Scheduler) ---------------
 
 @app.route("/cron/scrape", methods=["POST"])
@@ -214,6 +288,17 @@ def api_get_costs():
 def cron_scrape():
     logger.info("Cron scrape triggered")
     result = scrape_all_sources()
+    # Also run strikes scraper
+    strikes_result = scrape_strikes()
+    result["strikes"] = strikes_result
+    return jsonify(result)
+
+
+@app.route("/cron/scrape-strikes", methods=["POST"])
+@require_cron_or_admin
+def cron_scrape_strikes():
+    logger.info("Cron strikes scrape triggered")
+    result = scrape_strikes()
     return jsonify(result)
 
 

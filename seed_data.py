@@ -157,11 +157,173 @@ def seed_risk():
     ])
 
 
+# Historical Iranian strike events
+# Data from publicly reported incidents (OSINT):
+#   - April 2024: Operation True Promise I (Iran -> Israel)
+#   - October 2024: Operation True Promise II (Iran -> Israel)
+#   - February-March 2026: Escalation strikes
+#
+# Weapon types: ballistic_missile, cruise_missile, drone, hypersonic
+SEED_STRIKES = [
+    # Operation True Promise I — April 13-14, 2024
+    {
+        "date": "2024-04-13",
+        "weapon_type": "drone",
+        "launched": 170,
+        "intercepted": 170,
+        "hit": 0,
+        "target": "Israel",
+        "source": "IDF / CENTCOM",
+        "notes": "Operation True Promise I: Shahed-136 one-way attack drones; all intercepted en route by coalition forces",
+        "operation": "True Promise I",
+    },
+    {
+        "date": "2024-04-14",
+        "weapon_type": "cruise_missile",
+        "launched": 36,
+        "intercepted": 36,
+        "hit": 0,
+        "target": "Israel",
+        "source": "IDF / CENTCOM",
+        "notes": "Operation True Promise I: Paveh-class cruise missiles; intercepted by coalition aircraft and naval assets",
+        "operation": "True Promise I",
+    },
+    {
+        "date": "2024-04-14",
+        "weapon_type": "ballistic_missile",
+        "launched": 120,
+        "intercepted": 110,
+        "hit": 10,
+        "target": "Israel — Nevatim Airbase",
+        "source": "IDF / satellite imagery",
+        "notes": "Operation True Promise I: Emad & Ghadr ballistic missiles; ~10 impacted Nevatim Airbase area, limited damage to infrastructure",
+        "operation": "True Promise I",
+    },
+    # Operation True Promise II — October 1, 2024
+    {
+        "date": "2024-10-01",
+        "weapon_type": "ballistic_missile",
+        "launched": 181,
+        "intercepted": 162,
+        "hit": 19,
+        "target": "Israel — Nevatim, Tel Nof airbases; Mossad HQ area",
+        "source": "IDF / IRGC statement / satellite imagery",
+        "notes": "Operation True Promise II: Mix of Emad, Ghadr-H, Fattah-1 hypersonic-class; several impacts on airbases confirmed by satellite imagery",
+        "operation": "True Promise II",
+    },
+    # 2026 escalation — reported strikes
+    {
+        "date": "2026-02-28",
+        "weapon_type": "ballistic_missile",
+        "launched": 75,
+        "intercepted": 60,
+        "hit": 15,
+        "target": "US bases in Iraq and Syria",
+        "source": "CENTCOM / Reuters",
+        "notes": "Retaliatory salvo following US-Israeli strikes on Iran; mix of Fateh-110 and Qiam short-range ballistic missiles",
+        "operation": "2026 Escalation",
+    },
+    {
+        "date": "2026-02-28",
+        "weapon_type": "drone",
+        "launched": 50,
+        "intercepted": 42,
+        "hit": 8,
+        "target": "US bases in Iraq and Syria",
+        "source": "CENTCOM / Reuters",
+        "notes": "Shahed-136 drones launched alongside ballistic missile salvo",
+        "operation": "2026 Escalation",
+    },
+    {
+        "date": "2026-03-01",
+        "weapon_type": "cruise_missile",
+        "launched": 24,
+        "intercepted": 20,
+        "hit": 4,
+        "target": "Israel — Haifa port area",
+        "source": "IDF / Al Jazeera",
+        "notes": "Second wave: Paveh cruise missiles targeting Haifa naval installations",
+        "operation": "2026 Escalation",
+    },
+    {
+        "date": "2026-03-01",
+        "weapon_type": "ballistic_missile",
+        "launched": 90,
+        "intercepted": 72,
+        "hit": 18,
+        "target": "Israel — multiple military targets",
+        "source": "IDF / IRGC statement",
+        "notes": "Second wave: Emad, Ghadr, and reported Fattah-2 hypersonic variants; some penetrated Arrow-3 defense layer",
+        "operation": "2026 Escalation",
+    },
+    {
+        "date": "2026-03-05",
+        "weapon_type": "drone",
+        "launched": 100,
+        "intercepted": 85,
+        "hit": 15,
+        "target": "Israel and US assets in region",
+        "source": "CENTCOM / IDF",
+        "notes": "Large-scale Shahed drone wave; saturated air defenses in some sectors",
+        "operation": "2026 Escalation",
+    },
+    {
+        "date": "2026-03-05",
+        "weapon_type": "ballistic_missile",
+        "launched": 60,
+        "intercepted": 48,
+        "hit": 12,
+        "target": "Israel — Ramon Airbase, Dimona area",
+        "source": "IDF / satellite imagery",
+        "notes": "Targeted strike package following drone saturation wave",
+        "operation": "2026 Escalation",
+    },
+    {
+        "date": "2026-03-08",
+        "weapon_type": "ballistic_missile",
+        "launched": 45,
+        "intercepted": 38,
+        "hit": 7,
+        "target": "US bases in Gulf region",
+        "source": "CENTCOM / Reuters",
+        "notes": "Ongoing retaliatory exchanges; Fateh-class and Qiam missiles",
+        "operation": "2026 Escalation",
+    },
+    {
+        "date": "2026-03-08",
+        "weapon_type": "cruise_missile",
+        "launched": 18,
+        "intercepted": 14,
+        "hit": 4,
+        "target": "Israel — Tel Aviv area",
+        "source": "IDF / Al Jazeera",
+        "notes": "Cruise missiles aimed at military infrastructure near Tel Aviv; several intercepted by David's Sling",
+        "operation": "2026 Escalation",
+    },
+]
+
+
+def seed_strikes():
+    logger.info("Seeding Iranian strike data...")
+    for strike in SEED_STRIKES:
+        db.add_strike(**strike)
+        logger.info(
+            "  %s: %s — %d launched, %d intercepted, %d hit (%s)",
+            strike["date"],
+            strike["weapon_type"],
+            strike["launched"],
+            strike["intercepted"],
+            strike["hit"],
+            strike.get("operation", ""),
+        )
+
+
 def main():
     logger.info("=== Seeding Hormuz Premium Tracker ===")
     seed_rates()
     seed_news()
     seed_risk()
+    seed_strikes()
     logger.info("=== Seed complete ===")
 
 
