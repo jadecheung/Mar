@@ -49,6 +49,47 @@
     </div>
 </div>
 
+<!-- Ship Traffic section -->
+<div class="dashboard-grid">
+    <div class="card" id="card-ships-today">
+        <h3>Daily Ship Transits</h3>
+        <div class="big-number" style="color:var(--accent-blue)" id="ships-today">--</div>
+        <div class="change-indicator neutral" id="ships-change">Loading...</div>
+        <div class="source-label" id="ships-date"></div>
+    </div>
+
+    <div class="card" id="card-ships-avg">
+        <h3>7-Day Avg Transits</h3>
+        <div class="big-number" style="color:var(--accent-blue)" id="ships-avg-7d">--</div>
+        <div class="source-label">Rolling weekly average</div>
+    </div>
+
+    <div class="card" id="card-tankers">
+        <h3>Tankers Today</h3>
+        <div class="big-number" style="color:var(--accent-orange)" id="tankers-today">--</div>
+        <div class="source-label">Oil &amp; product tankers</div>
+    </div>
+
+    <div class="card" id="card-lng">
+        <h3>LNG Carriers Today</h3>
+        <div class="big-number" style="color:var(--accent-green)" id="lng-today">--</div>
+        <div class="source-label">Liquefied natural gas</div>
+    </div>
+</div>
+
+<!-- Ship Traffic Charts -->
+<div class="dashboard-grid two-col">
+    <div class="card chart-card">
+        <h3>Daily Ship Transits — Strait of Hormuz</h3>
+        <canvas id="ship-transit-chart"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>Vessel Type Breakdown (Latest)</h3>
+        <canvas id="vessel-breakdown-chart" style="max-height:320px;"></canvas>
+    </div>
+</div>
+
 <!-- Cost table row -->
 <div class="dashboard-grid two-col">
     <div class="card">

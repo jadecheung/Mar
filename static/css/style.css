@@ -157,6 +157,14 @@ body {
     color: var(--text-secondary);
 }
 
+.card .change-indicator.up-good {
+    color: var(--accent-green);
+}
+
+.card .change-indicator.down-bad {
+    color: var(--accent-red);
+}
+
 .card .source-label {
     color: var(--text-secondary);
     font-size: 0.75rem;

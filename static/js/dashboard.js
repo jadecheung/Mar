@@ -235,6 +235,213 @@ async function loadCosts() {
     }
 }
 
+// --------------- Ship Transits ---------------
+
+async function loadShipTransits() {
+    try {
+        const [summaryResp, transitsResp] = await Promise.all([
+            fetch('/api/ship-transits/summary'),
+            fetch('/api/ship-transits?limit=365'),
+        ]);
+        const summary = await summaryResp.json();
+        const transits = await transitsResp.json();
+
+        // KPI cards
+        if (summary.latest) {
+            document.getElementById('ships-today').textContent = summary.latest.total_ships;
+            document.getElementById('ships-date').textContent = formatDate(summary.latest.date);
+            document.getElementById('tankers-today').textContent = summary.latest.tankers || '--';
+            document.getElementById('lng-today').textContent = summary.latest.lng_carriers || '--';
+        }
+
+        document.getElementById('ships-avg-7d').textContent = summary.avg_7d || '--';
+
+        // Change indicator
+        if (transits.length >= 2) {
+            const latest = transits[transits.length - 1].total_ships;
+            const prev = transits[transits.length - 2].total_ships;
+            const change = latest - prev;
+            const el = document.getElementById('ships-change');
+            if (change > 0) {
+                el.className = 'change-indicator up-good';
+                el.textContent = '\u25B2 +' + change + ' from previous';
+            } else if (change < 0) {
+                el.className = 'change-indicator down-bad';
+                el.textContent = '\u25BC ' + change + ' from previous';
+            } else {
+                el.className = 'change-indicator neutral';
+                el.textContent = '\u2014 No change';
+            }
+        }
+
+        // Render charts
+        if (transits.length > 0) {
+            renderShipTransitChart(transits);
+            renderVesselBreakdownChart(transits[transits.length - 1]);
+        }
+    } catch (e) {
+        document.getElementById('ships-today').textContent = 'N/A';
+    }
+}
+
+let shipTransitChart = null;
+
+function renderShipTransitChart(transits) {
+    const ctx = document.getElementById('ship-transit-chart').getContext('2d');
+
+    const labels = transits.map(t => new Date(t.date));
+    const totals = transits.map(t => t.total_ships);
+    const tankers = transits.map(t => t.tankers || 0);
+    const lngData = transits.map(t => t.lng_carriers || 0);
+
+    if (shipTransitChart) {
+        shipTransitChart.data.labels = labels;
+        shipTransitChart.data.datasets[0].data = totals;
+        shipTransitChart.data.datasets[1].data = tankers;
+        shipTransitChart.data.datasets[2].data = lngData;
+        shipTransitChart.update();
+        return;
+    }
+
+    shipTransitChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Total Ships',
+                    data: totals,
+                    borderColor: '#4fc3f7',
+                    backgroundColor: 'rgba(79, 195, 247, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#4fc3f7',
+                },
+                {
+                    label: 'Tankers',
+                    data: tankers,
+                    borderColor: '#ffa726',
+                    backgroundColor: 'rgba(255, 167, 38, 0.05)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 2,
+                    pointBackgroundColor: '#ffa726',
+                },
+                {
+                    label: 'LNG Carriers',
+                    data: lngData,
+                    borderColor: '#66bb6a',
+                    backgroundColor: 'rgba(102, 187, 106, 0.05)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 2,
+                    pointBackgroundColor: '#66bb6a',
+                },
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: '#8899aa' }
+                },
+                tooltip: {
+                    backgroundColor: '#1a2737',
+                    borderColor: '#4fc3f7',
+                    borderWidth: 1,
+                    titleColor: '#e0e6ed',
+                    bodyColor: '#e0e6ed',
+                }
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'month',
+                        displayFormats: { month: 'MMM yyyy' }
+                    },
+                    grid: { color: 'rgba(42,58,74,0.5)' },
+                    ticks: { color: '#8899aa' }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(42,58,74,0.5)' },
+                    ticks: { color: '#8899aa' },
+                    title: {
+                        display: true,
+                        text: 'Ships per Day',
+                        color: '#8899aa'
+                    }
+                }
+            }
+        }
+    });
+}
+
+let vesselBreakdownChart = null;
+
+function renderVesselBreakdownChart(latest) {
+    const ctx = document.getElementById('vessel-breakdown-chart').getContext('2d');
+
+    const data = [
+        latest.tankers || 0,
+        latest.lng_carriers || 0,
+        latest.container_ships || 0,
+        latest.bulk_carriers || 0,
+        latest.other || 0,
+    ];
+    const labels = ['Tankers', 'LNG Carriers', 'Container Ships', 'Bulk Carriers', 'Other'];
+    const colors = ['#ffa726', '#66bb6a', '#4fc3f7', '#ab47bc', '#8899aa'];
+
+    if (vesselBreakdownChart) {
+        vesselBreakdownChart.data.datasets[0].data = data;
+        vesselBreakdownChart.update();
+        return;
+    }
+
+    vesselBreakdownChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors,
+                borderColor: '#0f1923',
+                borderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#8899aa', padding: 12 }
+                },
+                tooltip: {
+                    backgroundColor: '#1a2737',
+                    borderColor: '#4fc3f7',
+                    borderWidth: 1,
+                    titleColor: '#e0e6ed',
+                    bodyColor: '#e0e6ed',
+                    callbacks: {
+                        label: function(ctx) {
+                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                            const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                            return ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
 // --------------- Helpers ---------------
 
 function escapeHtml(str) {
@@ -251,6 +458,7 @@ async function refreshAll() {
         loadRiskLevel(),
         loadNews(),
         loadCosts(),
+        loadShipTransits(),
     ]);
 
     const rates = await loadRateHistory();

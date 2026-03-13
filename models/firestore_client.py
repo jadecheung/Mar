@@ -230,6 +230,90 @@ def set_risk_level(level: str, factors: list):
     })
 
 
+# --------------- Ship Transits ---------------
+
+def add_ship_transit(date_str: str, total_ships: int, tankers: int = 0,
+                     lng_carriers: int = 0, container_ships: int = 0,
+                     bulk_carriers: int = 0, other: int = 0,
+                     source: str = "", notes: str = ""):
+    db = _get_db()
+    doc_data = {
+        "date": datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc),
+        "total_ships": total_ships,
+        "tankers": tankers,
+        "lng_carriers": lng_carriers,
+        "container_ships": container_ships,
+        "bulk_carriers": bulk_carriers,
+        "other": other,
+        "source": source,
+        "notes": notes,
+        "created_at": firestore.SERVER_TIMESTAMP,
+    }
+    db.collection(Config.FIRESTORE_COLLECTION_SHIP_TRANSITS).add(doc_data)
+    return doc_data
+
+
+def get_ship_transits(limit: int = 365):
+    """Get ship transit records sorted by date ascending."""
+    db = _get_db()
+    try:
+        query = (
+            db.collection(Config.FIRESTORE_COLLECTION_SHIP_TRANSITS)
+            .order_by("date", direction=firestore.Query.ASCENDING)
+            .limit(limit)
+        )
+        return [_serialize_doc(doc) for doc in query.stream()]
+    except Exception:
+        logger.info("Using client-side sort for get_ship_transits")
+        query = db.collection(Config.FIRESTORE_COLLECTION_SHIP_TRANSITS).limit(limit)
+        results = [_serialize_doc(doc) for doc in query.stream()]
+        results.sort(key=lambda r: r.get("date", ""))
+        return results
+
+
+def get_latest_ship_transit():
+    """Get the most recent ship transit record."""
+    db = _get_db()
+    try:
+        query = (
+            db.collection(Config.FIRESTORE_COLLECTION_SHIP_TRANSITS)
+            .order_by("date", direction=firestore.Query.DESCENDING)
+            .limit(1)
+        )
+        for doc in query.stream():
+            return _serialize_doc(doc)
+    except Exception:
+        logger.info("Using client-side sort for get_latest_ship_transit")
+        query = db.collection(Config.FIRESTORE_COLLECTION_SHIP_TRANSITS)
+        results = [_serialize_doc(doc) for doc in query.stream()]
+        if results:
+            results.sort(key=lambda r: r.get("date", ""), reverse=True)
+            return results[0]
+    return None
+
+
+def ship_transit_exists_for_date(date_str: str) -> bool:
+    """Check if a ship transit record exists near a given date."""
+    db = _get_db()
+    target = datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc)
+    window_start = target - timedelta(hours=12)
+    window_end = target + timedelta(hours=12)
+    try:
+        for doc in db.collection(Config.FIRESTORE_COLLECTION_SHIP_TRANSITS).stream():
+            d = doc.to_dict()
+            dt = d.get("date")
+            if hasattr(dt, "timestamp") and window_start <= dt <= window_end:
+                return True
+    except Exception as e:
+        logger.warning("ship_transit_exists_for_date error: %s", e)
+    return False
+
+
+def delete_ship_transit(doc_id: str):
+    db = _get_db()
+    db.collection(Config.FIRESTORE_COLLECTION_SHIP_TRANSITS).document(doc_id).delete()
+
+
 # --------------- App Meta (seeding flag) ---------------
 
 def is_seeded() -> bool:

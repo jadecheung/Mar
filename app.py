@@ -6,6 +6,7 @@ from flask import Flask, jsonify, render_template, request
 from config import Config
 from models import firestore_client as db
 from scrapers.news_scraper import scrape_all_sources
+from scrapers.ship_tracker import scrape_ship_transits, get_transit_summary
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -207,6 +208,69 @@ def api_get_costs():
     return jsonify(costs)
 
 
+# --------------- API: Ship Transits ---------------
+
+@app.route("/api/ship-transits")
+def api_get_ship_transits():
+    limit = int(request.args.get("limit", "365"))
+    try:
+        transits = db.get_ship_transits(limit=limit)
+        return jsonify(transits)
+    except Exception as e:
+        logger.error("api_get_ship_transits error: %s", e)
+        return jsonify([])
+
+
+@app.route("/api/ship-transits/latest")
+def api_get_latest_ship_transit():
+    try:
+        transit = db.get_latest_ship_transit()
+        if transit:
+            return jsonify(transit)
+    except Exception as e:
+        logger.error("api_get_latest_ship_transit error: %s", e)
+    return jsonify({"error": "No transit data found"}), 404
+
+
+@app.route("/api/ship-transits/summary")
+def api_get_transit_summary():
+    try:
+        summary = get_transit_summary()
+        return jsonify(summary)
+    except Exception as e:
+        logger.error("api_get_transit_summary error: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/ship-transits", methods=["POST"])
+@require_admin
+def api_add_ship_transit():
+    data = request.get_json() or request.form
+    required = ["date", "total_ships"]
+    for field in required:
+        if field not in data:
+            return jsonify({"error": f"Missing field: {field}"}), 400
+    db.add_ship_transit(
+        date_str=data["date"],
+        total_ships=int(data["total_ships"]),
+        tankers=int(data.get("tankers", 0)),
+        lng_carriers=int(data.get("lng_carriers", 0)),
+        container_ships=int(data.get("container_ships", 0)),
+        bulk_carriers=int(data.get("bulk_carriers", 0)),
+        other=int(data.get("other", 0)),
+        source=data.get("source", ""),
+        notes=data.get("notes", ""),
+    )
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/ship-transits/<doc_id>", methods=["DELETE"])
+@require_admin
+def api_delete_ship_transit(doc_id):
+    db.delete_ship_transit(doc_id)
+    return jsonify({"status": "ok"})
+
+
 # --------------- Cron endpoints (Cloud Scheduler) ---------------
 
 @app.route("/cron/scrape", methods=["POST"])
@@ -214,6 +278,12 @@ def api_get_costs():
 def cron_scrape():
     logger.info("Cron scrape triggered")
     result = scrape_all_sources()
+    try:
+        ship_result = scrape_ship_transits()
+        result["ship_transits"] = ship_result
+    except Exception as e:
+        logger.error("Ship transit scrape error: %s", e)
+        result["ship_transits"] = {"error": str(e)}
     return jsonify(result)
 
 
@@ -230,6 +300,12 @@ def cron_seed():
 @require_admin
 def api_trigger_scrape():
     result = scrape_all_sources()
+    try:
+        ship_result = scrape_ship_transits()
+        result["ship_transits"] = ship_result
+    except Exception as e:
+        logger.error("Ship transit scrape error: %s", e)
+        result["ship_transits"] = {"error": str(e)}
     return jsonify(result)
 
 
